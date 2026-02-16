@@ -115,7 +115,7 @@ export default function QuizMode() {
       });
 
       try {
-         await api.post("/mcq/attempt", {
+         const res = await api.post("/mcq/attempt", {
             subject,
             topic,
             score: scoreData,
@@ -123,20 +123,11 @@ export default function QuizMode() {
             selectedOptions,
             questions: payloadQuestions
          });
+
+         navigate(`/my-attempts/${res.data.attemptId}`);
       } catch (err) {
          console.error("Save attempt error:", err);
       }
-
-      navigate("/interview/quiz/results", {
-         state: {
-            subject,
-            topic,
-            questions: payloadQuestions,
-            selectedOptions,
-            score: scoreData,
-            time: seconds
-         }
-      });
 
       setStartMCQ(false);
       setQuestions([]);
