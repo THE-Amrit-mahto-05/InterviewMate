@@ -12,8 +12,11 @@ export default function MyAttempts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (id) {
+      setDetails(null);
+      setLoading(true)
+    }
     (async () => {
-      setLoading(true);
       try {
         if (id) {
           const res = await api.get(`/mcq/attempt/${id}`);
@@ -30,22 +33,18 @@ export default function MyAttempts() {
     })();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex bg-[#FDFCF8] font-sans text-neutral-900">
-        <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
-            <div className="text-center">
-               <div className="w-8 h-8 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
-               <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Loading Data...</p>
-            </div>
-        </main>
-      </div>
-    );
-  }
-
   // DETAILED VIEW (Single Attempt)
-  if (id && details) {
+  if (id) {
+    if (loading || !details) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin"></div>
+            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Loading Attempt...</p>
+          </div>
+        </div>
+      );
+    }
     const { attempt } = details;
     const notAttempted = attempt.total - (attempt.correct + attempt.wrong);
     return (
@@ -178,19 +177,28 @@ export default function MyAttempts() {
           </div>
 
           <div className="space-y-4">
-            {attempts.length === 0 ? (
-              <div className="bg-white border border-dashed border-neutral-300 p-16 text-center shadow-sm">
-                <Layers size={32} className="mx-auto text-neutral-300 mb-4" />
-                <h2 className="text-lg font-bold text-neutral-700 mb-2">No MCQ Attempts Yet</h2>
-                <p className="text-sm text-neutral-500 mb-6">
-                  You haven’t taken any quizzes yet. Start practicing to see your performance reports here.
-                </p>
-                <button
-                  onClick={() => navigate("/interview")}
-                  className="px-6 py-2 bg-neutral-900 text-white text-sm font-bold uppercase tracking-wider rounded-sm hover:bg-neutral-800 transition cursor-pointer"
-                >
-                  Start a Quiz
-                </button>
+            {loading ? (
+              <div className="border border-dashed border-neutral-300 rounded-sm p-12 text-center bg-neutral-50/50">
+                  <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+                    Retrieving Data...
+                  </p>
+              </div>
+            ) : attempts.length === 0 ? (
+              <div className="border border-neutral-200 bg-white p-12 text-center shadow-sm flex flex-col items-center">
+                  <Layers className="text-neutral-300 mb-6" size={48} strokeWidth={1} />
+                  <p className="text-sm font-bold text-neutral-900 uppercase tracking-wider mb-2">
+                    No Records Found
+                  </p>
+                  <p className="text-xs text-neutral-500 mb-6 max-w-xs">
+                    Start a quiz to see your performance reports here.
+                  </p>
+                  <button
+                    onClick={() => navigate("/interview")}
+                    className="px-6 py-2 bg-neutral-900 text-white text-sm font-bold uppercase tracking-wider rounded-sm hover:bg-neutral-800 transition cursor-pointer"
+                  >
+                    Start a Quiz
+                  </button>
               </div>
             ) : (
               attempts.map((a) => (
