@@ -10,7 +10,7 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 async function generateJSON(prompt, retries = 3) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-flash-latest",
       contents: [{ type: "text", text: prompt }]
     })
 
