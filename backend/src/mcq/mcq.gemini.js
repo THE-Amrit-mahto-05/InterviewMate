@@ -21,6 +21,7 @@ async function generateAIResponse(subject, topic, prompt) {
     }
 
     return {
+      text,
       candidates: [
         {
           content: {
