@@ -33,22 +33,29 @@ export default function QuizMode() {
    try {
       const res = await api.post("/mcq/ask", { subject, topic, mode: "mcq" })
       if (!res.data.success) {
-         throw new Error("AI request failed");
+         const message = res.data?.message || "AI request failed";
+         throw new Error(message);
       }
 
-      const rawText = res?.data?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const rawText =
+         res?.data?.data?.text ||
+         res?.data?.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+         res?.data?.data?.output?.[0]?.content?.[0]?.text ||
+         res?.data?.data?.response?.output?.[0]?.content?.[0]?.text ||
+         "";
       if (!rawText || typeof rawText !== "string") {
-         throw new Error("Invalid MCQ response from AI");
+         const message = res.data?.message || "Invalid MCQ response from AI";
+         throw new Error(message);
       }
 
       const qArr = rawText
-         .split(/\n(?=\d+[\.\)])/)
+         .split(/\n(?=\d+[.)])/) 
          .map((qBlock) => {
          const lines = qBlock.split("\n").filter(Boolean);
-         const questionText = (lines[0] || "").replace(/^\d+[\.\)]\s*/, "");
+         const questionText = (lines[0] || "").replace(/^\d+[.)]\s*/, "");
 
          const options = lines
-            .filter((line) => /^[abcd][\.\)]\s/.test(line))
+            .filter((line) => /^[abcd][.)]\s/.test(line))
             .map((opt) => ({
                label: opt[0].toLowerCase(),
                text: opt.slice(2).trim(),
@@ -75,8 +82,9 @@ export default function QuizMode() {
       setSeconds(0);
       setStartMCQ(true);
    } catch (err) {
-      console.error("Error loading MCQ:", err);
-      alert("Failed to generate quiz. Please try again.");
+      console.error("Error loading MCQ:", err.response?.data || err);
+      const errorMessage = err.response?.data?.message || err.message || "Failed to generate quiz. Please try again.";
+      alert(errorMessage);
    }
    setLoading(false);
    }
