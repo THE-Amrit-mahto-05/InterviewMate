@@ -7,7 +7,6 @@ const Signup = lazy(() => import("./pages/SignUp"))
 const Dashboard = lazy(() => import("./pages/Dashboard"))
 const Subjects = lazy(() => import("./pages/Subjects"))
 const QuizMode = lazy(() => import("./pages/QuizMode"))
-const QuizResults = lazy(() => import("./pages/QuizResults"))
 const MyAttempts = lazy(() => import("./pages/MyAttempts"))
 const StartInterview = lazy(() => import("./pages/Interview"))
 const InterviewSession = lazy(() => import("./pages/InterviewSession"))
@@ -64,15 +63,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <QuizMode />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/interview/quiz/results"
-            element={
-              <ProtectedRoute>
-                <QuizResults />
               </ProtectedRoute>
             }
           />

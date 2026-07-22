@@ -262,86 +262,95 @@ async function getAIInterviewHistory(userId) {
 }
 
 async function getInterviewAnalytics(userId) {
-  const interviews = await prisma.interview.findMany({
-    where: {
-      userId: Number(userId),
-      endedAt: { not: null }
-    },
-    include: {
-      questions: {
-        select: { score: true }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  })
-
-  const totalInterviews = interviews.length
-
-  // ---- Success Score (Average per Interview) ----
-  const interviewAverages = interviews
-    .map(i => {
-      const scores = i.questions.map(q => q.score).filter(s => s !== null)
-      if (scores.length === 0) return null
-
-      return scores.reduce((a, b) => a + b, 0) / scores.length
+  const [interviews, mcqAttempts] = await Promise.all([
+    prisma.interview.findMany({
+      where: { userId: Number(userId), endedAt: { not: null } },
+      include: { questions: { select: { score: true } } },
+      orderBy: { endedAt: "desc" }
+    }),
+    prisma.mCQAttempt.findMany({
+      where: { userId: Number(userId) },
+      orderBy: { createdAt: "desc" }
     })
-    .filter(avg => avg !== null)
+  ]);
 
-  let successScore = 0
+  const totalInterviews = interviews.length + mcqAttempts.length;
 
-  if (interviewAverages.length > 0) {
-    const avgInterviewScore =
-      interviewAverages.reduce((a, b) => a + b, 0) /
-      interviewAverages.length
-    successScore = Math.round(avgInterviewScore * 10)
+  const interviewScores = interviews.map(i => {
+    const scores = i.questions.map(q => q.score).filter(s => s !== null);
+    return scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  }).filter(s => s !== null);
+
+  const mcqScores = mcqAttempts.map(a => (a.correct / a.total) * 10);
+
+  const allScores = [...interviewScores, ...mcqScores];
+  let successScore = 0;
+  if (allScores.length > 0) {
+    const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+    successScore = Math.round(avg * 10);
   }
 
-  // ---- Current Streak ----
+
   function getLocalDateString(date) {
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
-    return d.toLocaleDateString('en-CA')
+    const d = new Date(date);
+    return d.toLocaleDateString('en-CA');
   }
 
-  const interviewDays = new Set(interviews.map(i => getLocalDateString(i.endedAt)))
+  const sessionDays = new Set([
+    ...interviews.map(i => getLocalDateString(i.endedAt)),
+    ...mcqAttempts.map(a => getLocalDateString(a.createdAt))
+  ]);
 
-  let currentStreak = 0
-  let cursor = new Date()
-  cursor.setHours(0, 0, 0, 0)
+  let currentStreak = 0;
+  let cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+
+  const todayStr = getLocalDateString(cursor);
+  if (!sessionDays.has(todayStr)) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
 
   while (true) {
-    const day = getLocalDateString(cursor)
-    if (interviewDays.has(day)) {
-      currentStreak++
-      cursor.setDate(cursor.getDate() - 1)
+    const day = getLocalDateString(cursor);
+    if (sessionDays.has(day)) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
     } else {
-      break
+      break;
     }
   }
 
-  // ---- Recent Attempts (last 3) ----
-  const recentAttempts = interviews.slice(0, 3).map(i => {
-    const scores = i.questions.map(q => q.score).filter(s => s !== null)
-    const avgScore =
-      scores.length > 0
-        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-        : 0
+  const combined = [
+    ...interviews.map(i => {
+      const scores = i.questions.map(q => q.score).filter(s => s !== null);
+      const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      return {
+        id: i.id,
+        title: i.role,
+        score: avg,
+        type: "Interview",
+        createdAt: i.endedAt
+      };
+    }),
+    ...mcqAttempts.map(a => ({
+      id: a.id,
+      title: `${a.subject}: ${a.topic}`,
+      score: Math.round((a.correct / a.total) * 10),
+      type: "MCQ Quiz",
+      createdAt: a.createdAt
+    }))
+  ];
 
-    return {
-      id: i.id,
-      title: i.role,
-      score: avgScore,
-      type: "Technical",
-      createdAt: i.createdAt
-    }
-  })
+  const recentAttempts = combined
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 3);
 
   return {
     totalInterviews,
     successScore,
     currentStreak,
     recentAttempts
-  }
+  };
 }
 
-module.exports = {createInterviewSession, fetchNextQuestion, saveUserAnswerAndEvaluate, getInterviewAnalytics, getAIInterviewHistory}
+module.exports = { createInterviewSession, fetchNextQuestion, saveUserAnswerAndEvaluate, getInterviewAnalytics, getAIInterviewHistory }
