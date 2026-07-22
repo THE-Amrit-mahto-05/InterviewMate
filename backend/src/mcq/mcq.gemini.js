@@ -15,7 +15,11 @@ async function generateAIResponse(subject, topic, prompt) {
       }]
     })
 
-    const text = response.text?.trim() || ""
+    const text = response.text?.trim()
+    if (!text) {
+      throw new Error("Gemini returned an empty response")
+    }
+
     return {
       candidates: [
         {
@@ -29,16 +33,8 @@ async function generateAIResponse(subject, topic, prompt) {
     }
 
   } catch (error) {
-    console.error("Gemini SDK Error:", error.message)
-    return {
-      candidates: [
-        {
-          content: {
-            parts: [{ text: "" }]
-          }
-        }
-      ]
-    }
+    console.error("Gemini SDK Error:", error?.message || error)
+    throw new Error(`Gemini API failed: ${error?.message || error}`)
   }
 }
 

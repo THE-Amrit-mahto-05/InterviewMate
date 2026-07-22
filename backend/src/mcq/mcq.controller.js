@@ -43,11 +43,15 @@ Provide clean structured output suitable for ${mode} mode.
     }
 
     const response = await generateAIResponse(subject, topic, prompt);
+    const text = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text || typeof text !== "string") {
+      throw new Error("Invalid MCQ response from AI");
+    }
 
     res.json({ success: true, data: response });
   } catch (err) {
     console.error("AI Error:", err.response?.data || err);
-    res.status(500).json({ success: false, message: "AI error" });
+    res.status(500).json({ success: false, message: err.message || "AI error" });
   }
 }
 
