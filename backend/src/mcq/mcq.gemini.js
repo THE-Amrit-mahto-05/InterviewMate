@@ -9,10 +9,7 @@ async function generateAIResponse(subject, topic, prompt) {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: [{
-        role: "user",
-        parts: [{ text: prompt }]
-      }]
+      contents: prompt
     })
 
     const text = response.text?.trim()
